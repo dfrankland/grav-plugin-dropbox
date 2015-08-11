@@ -1,0 +1,24 @@
+enabled: true
+route: /dropbox
+
+# Get these from https://dropbox.com/developers/apps.
+app:
+  # Your dropbox app's key.
+  key:
+  # Your dropbox app's secret.
+  secret:
+  # Generated Oauth2 token. Guide is here:
+  # https://blogs.dropbox.com/developers/2014/05/generate-an-access-token-for-your-own-account/
+  token:
+
+# Paths to synchronize with Dropbox
+sync:
+  # Default is root of the App folder ( /App/{YOUR APP NAME HERE}/ ).
+  remote:
+  # Default is this plugins folder.
+  local: synchronize
+
+# TODO:
+# Email for alerts (if Oauth2 token expires, etc.).
+# If no email is provided no alerts will be sent.
+# email:
