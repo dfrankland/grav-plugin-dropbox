@@ -157,12 +157,10 @@ class DropboxPlugin extends Plugin
         if ( CACHE_ENABLED === true ) {
             foreach( $contents as $content ){
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
-                // $this->grav['log']->warning( "imYours rev: " . $content[3] );
                 if( $content[1] !== null ) {
                     list( $object, $mtime, $dir ) = $this->cache->fetch( $dbx_cache_id );
                     if ( $object === null || $object !== null && strtotime( $mtime ) < strtotime( $content[1] ) ) {
                         $content[1] = $this->getFile( $content );
-                        $this->grav['log']->warning( "imYours new mtime after dl: " . var_export($content, true) );
                         $this->cache->save( $dbx_cache_id, $content );
                     }
                 } else {
@@ -191,10 +189,7 @@ class DropboxPlugin extends Plugin
         if ( CACHE_ENABLED === true ) {
             foreach( $contents as $content ){
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
-                $this->grav['log']->warning( "youreMine " . var_export($content[0], true) . " = " . $dbx_cache_id );
                 list( $object, $mtime, $dir, $rev ) = $this->cache->fetch( $dbx_cache_id );
-                $this->grav['log']->warning( "object=$object, mtime=$mtime, dir=$dir, rev=$rev" );
-                $this->grav['log']->warning( $mtime . " < " . $content[1] . " = " . ( $mtime < $content[1] ) );
                 if ( $object === null ) {
                     $this->uploadFile( $content );
                     $this->cache->save( $dbx_cache_id, $content );
@@ -222,7 +217,6 @@ class DropboxPlugin extends Plugin
                 $oldLocalSyncPaths = json_decode ( file_get_contents( SYNCPATHS_FILE ) );
             }
         }
-        //$this->grav['log']->warning( "Before oldLocalSyncPaths = " . var_export($oldLocalSyncPaths, true) );
         foreach ( $objects as $object ) {
             clearstatcache( true, $object );
             if ( $object->isDir() ) {
@@ -236,14 +230,12 @@ class DropboxPlugin extends Plugin
                 $dir = false;
             }
             $mtime = stat( $object )['mtime'];
-            $this->grav['log']->warning( basename($object) . " mtime = " . var_export($mtime, true) );
             $object = str_replace( DBX_SYNC_LOCAL, '', $object);
             $localSyncPaths[] = $object;
             if( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
                 $needle = $object;
                 $found = false;
                 while ( $found === false ) {
-                    //$this->grav['log']->warning( "array_search for " . $needle . " inside of " . var_export($oldLocalSyncPaths,true) );
                     $found = array_search( $needle, $oldLocalSyncPaths );
                     if( $found !== false ) {
                         unset( $oldLocalSyncPaths[ $found ] );
@@ -256,12 +248,10 @@ class DropboxPlugin extends Plugin
                 }
             }
             if( !empty( $object ) ) {
-                $this->grav['log']->warning( "Object added to contents:\n " . var_export( array( $object, $mtime, $dir, null ), true ) );
                 $contents[] = array( $object, $mtime, $dir, null );
             }
         }
         if( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
-            //$this->grav['log']->warning( "After oldLocalSyncPaths = " . var_export($oldLocalSyncPaths, true) );
             foreach( $oldLocalSyncPaths as $oldSyncPath ) {
                 $this->deleteRemoteFile( $oldSyncPath );
             }
@@ -278,7 +268,6 @@ class DropboxPlugin extends Plugin
 
     private function getFile ( $content )
     {
-        $this->grav['log']->warning( "getFile " . $content[0] );
         $localSyncPath = DBX_SYNC_LOCAL . $content[0];
         if ( $content[2] === false ){
             $remoteSyncPath = DBX_SYNC_REMOTE . $content[0];
@@ -301,12 +290,11 @@ class DropboxPlugin extends Plugin
 
     private function uploadFile ( $content, $rev = false )
     {
-        $this->grav['log']->warning( "uploadFile " . $content[0] );
         $remoteSyncPath = DBX_SYNC_REMOTE . $content[0];
         $localSyncPath = DBX_SYNC_LOCAL . $content[0];
         $pathError = dbx\Path::findError( $remoteSyncPath );
         if ( $pathError !== null ) {
-            $this->grav['log']->warning("Dropbox remote sync path error: $pathError");
+            $this->grav['log']->error("Dropbox remote sync path error: $pathError");
         } else {
             if ( $content[2] === false ) {
                 $size = null;
@@ -314,7 +302,6 @@ class DropboxPlugin extends Plugin
                     $size = filesize( $localSyncPath );
                 }
                 $writeMode = dbx\WriteMode::add();
-                $this->grav['log']->warning("Rev: $rev");
                 if( $rev !== false && $rev !== null ){
                     $writeMode = dbx\WriteMode::update( $rev );
                 }
@@ -330,7 +317,6 @@ class DropboxPlugin extends Plugin
 
     private function deleteLocalFile ( $content )
     {
-        $this->grav['log']->warning( "deleteLocalFile " . $content );
         $object = DBX_SYNC_LOCAL . $content;
         if ( file_exists( $object ) ) {
             if( is_dir( $object ) ){
@@ -343,7 +329,6 @@ class DropboxPlugin extends Plugin
 
     private function deleteRemoteFile ( $content )
     {
-        $this->grav['log']->warning( "deleteRemoteFile " . $content );
         $object = DBX_SYNC_REMOTE . $content;
         if( $object !== '/' && !empty( $object ) ) {
             $metadata = $this->dbxClient->getMetadata( $object );
@@ -370,7 +355,7 @@ class DropboxPlugin extends Plugin
     {
         if ( empty( DBX_APP_TOKEN ) ) {
             $this->dbxClient = false;
-            $this->grav['log']->warning("Dropbox Oauth2 token isn't set: Please get one from https://dropbox.com/developers/apps.");
+            $this->grav['log']->error("Dropbox Oauth2 token isn't set: Please get one from https://dropbox.com/developers/apps.");
             return false;
         }
         $appInfo = $this->getAppConfig();
@@ -380,7 +365,7 @@ class DropboxPlugin extends Plugin
         if( $this->dbxClient !== false ) {
             return true;
         } else {
-            $this->grav['log']->warning("Dropbox couldn't authorize client.");
+            $this->grav['log']->error("Dropbox couldn't authorize client.");
             // TODO: send email alert (failed attempt to authorize);
             return false;
         }
