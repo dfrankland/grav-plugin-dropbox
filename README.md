@@ -3,11 +3,21 @@ A highly alpha, yet working Dropbox plugin for Grav.
 
 ## *IMPORTANT: THIS PLUGIN IS NOT 100% TESTED, THERE IS A RISK FOR LOSS OF DATA. PLEASE, USE CAREFULLY; YOU ARE RESPONSIBLE FOR ANY LOSSES INCURRED BY USING THIS PLUGIN.*
 
+### Made With
+[**:space_invader: Grav CMS**](https://github.com/getgrav/grav) &mdash; Grav is a **Fast**, **Simple**, and **Flexible**, file-based Web-platform.
+
+[**:arrows_counterclockwise: Dropbox SDK**](https://github.com/dropbox/dropbox-sdk-php) &mdash; A PHP library to access [Dropbox's HTTP-based API](http://dropbox.com/developers/core/docs).
+
+[**:heart: Love**](https://www.youtube.com/watch?v=HEXWRTEbj1I) &mdash; "nature's way of tricking people into reproducing" -Urban Dictionary
+
 ### Requirements
-1. [PHP Oauth installed](https://secure.php.net/manual/en/oauth.installation.php)
-2. Grav cache enabled (using with cache disabled is currently untested)
-3. SSL
-  1. There are lots of options for getting a free certificate such as:
+* [PHP Oauth extension](https://secure.php.net/manual/en/oauth.installation.php)
+* PHP 5.3+, [with 64-bit integers](http://stackoverflow.com/questions/864058/how-to-have-64-bit-integer-on-php).
+* [PHP cURL extension](https://secure.php.net/manual/en/curl.installation.php) with SSL enabled (it's usually built-in).
+* Must not be using [`mbstring.func_overload`](http://www.php.net/manual/en/mbstring.overload.php) to overload PHP's standard string functions.
+* Grav cache enabled (using with cache disabled is currently untested)
+* SSL
+  * There are lots of options for getting a free certificate such as:
     1. Self-signing ([Nginx](https://www.digitalocean.com/community/tutorials/how-to-create-an-ssl-certificate-on-nginx-for-ubuntu-14-04) &amp; [Apache](https://www.digitalocean.com/community/tutorials/how-to-create-a-ssl-certificate-on-apache-for-ubuntu-14-04))
     2. [StartSSL](https://www.startssl.com/)
     3. [Cloudflare](https://www.cloudflare.com/ssl)
