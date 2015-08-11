@@ -1,0 +1,12 @@
+name: Dropbox
+version: 0.0.0
+description: "A highly alpha, yet working Dropbox plugin for Grav."
+icon: dropbox
+author:
+  name: Dylan Frankland
+  email: dylan@frankland.io
+  url: http://dylan.frankland.io
+homepage: https://github.com/dfrankland/grav-plugin-dropbox
+keywords: dropbox, file, files, sync, plugin
+bugs: https://github.com/dfrankland/grav-plugin-dropbox/issues
+license: MIT
