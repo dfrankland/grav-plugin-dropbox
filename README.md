@@ -11,7 +11,7 @@ A highly alpha, yet working Dropbox plugin for Grav.
     1. Self-signing ([Nginx](https://www.digitalocean.com/community/tutorials/how-to-create-an-ssl-certificate-on-nginx-for-ubuntu-14-04) &amp; [Apache](https://www.digitalocean.com/community/tutorials/how-to-create-a-ssl-certificate-on-apache-for-ubuntu-14-04))
     2. [StartSSL](https://www.startssl.com/)
     3. [Cloudflare](https://www.cloudflare.com/ssl)
-    4. Et cetra
+    4. [Et cetra](https://www.google.com/search?q=free+ssl+certificates)
 
 ### Getting Started
 *[This is the official webhook guide from dropbox](https://www.dropbox.com/developers/webhooks/tutorial), but the instructions below are probably more helpful.*
