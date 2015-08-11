@@ -1,4 +1,4 @@
-# Dropbox Plugin for [Grav](http://getgrav.org) CMS
+# Dropbox Plugin for Grav CMS
 A highly alpha, yet working Dropbox plugin for Grav.
 
 ## *IMPORTANT: THIS PLUGIN IS NOT 100% TESTED, THERE IS A RISK FOR LOSS OF DATA. PLEASE, USE CAREFULLY; YOU ARE RESPONSIBLE FOR ANY LOSSES INCURRED BY USING THIS PLUGIN.*
@@ -50,25 +50,25 @@ A highly alpha, yet working Dropbox plugin for Grav.
 
 ### Options
 
-#### Sync Path:
+##### Sync Path:
 Inside of [dropbox.yaml](https://github.com/dfrankland/grav-plugin-dropbox/blob/master/dropbox.yaml) you may change the folders which Dropbox will sync (changing these values is currently untested).
 ```
 sync:
   remote:
   local: synchronize
 ```
-#### Email alerts:
+##### Email alerts:
 This feature still needs to be developed.
 
 ### How to Use
 Please, follow the "Getting Started" instructions above before following these steps.
 
-#### Syncing Dropbox to Grav:
+##### Syncing Dropbox to Grav:
 1. In your Dropbox app folder inside `/App/{app name}` add files, folders, or make modifications to them like normal.
 2. Watch for Grav to sync the new or modified content to the `grav/user/plugins/dropbox/synchronize` folder.
 3. Check the log at `grav/logs/grav.log` for errors. If any exceptions occur please [report an issue](https://github.com/dfrankland/grav-plugin-dropbox/issues/new).
 
-#### Syncing Grav to Dropbox:
+##### Syncing Grav to Dropbox:
 1. In the Grav Dropbox plugin folder inside `grav/user/plugins/dropbox/synchronize` add files, folders, or make modifications to them like normal.
 2. Make a request to "https://{yourdomain.tld}/dropbox". This can be done manually by using your browser, `curl`ing, or using [the tool provided by Dropbox](https://github.com/dropbox/dropbox_hook). It would be a great idea to set this on a cron schedule to check every couple of minutes!
 3. Watch for Dropbox to sync the new or modified content to the app folder inside the `/App/{app name}` folder.
