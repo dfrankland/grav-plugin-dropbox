@@ -329,31 +329,35 @@ class DropboxPlugin extends Plugin
 
     private function deleteLocalFile ( $content )
     {
-        $object = DBX_SYNC_LOCAL . $content;
-        if ( file_exists( $object ) ) {
-            if( is_dir( $object ) ){
-                $inner_objects = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $object ), \RecursiveIteratorIterator::CHILD_FIRST );
-                foreach ($inner_objects as $inner_object) {
-                    if( $inner_object->isDir() ) {
-                        rmdir( $inner_object );
-                    } else {
-                        unlink( $inner_object );
+        if( $content !== null ) {
+            $object = DBX_SYNC_LOCAL . $content;
+            if ( file_exists( $object ) ) {
+                if( is_dir( $object ) ){
+                    $inner_objects = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $object ), \RecursiveIteratorIterator::CHILD_FIRST );
+                    foreach ($inner_objects as $inner_object) {
+                        if( $inner_object->isDir() ) {
+                            rmdir( $inner_object );
+                        } else {
+                            unlink( $inner_object );
+                        }
                     }
+                    rmdir( $object );
+                } else {
+                    unlink( $object );
                 }
-                rmdir( $object );
-            } else {
-                unlink( $object );
             }
         }
     }
 
     private function deleteRemoteFile ( $content )
     {
-        $object = DBX_SYNC_REMOTE . $content;
-        if( $object !== '/' && !empty( $object ) ) {
-            $metadata = $this->dbxClient->getMetadata( $object );
-            if( $metadata !== null ) {
-                $this->dbxClient->delete( $object );
+        if( $content !== null ) {
+            $object = DBX_SYNC_REMOTE . $content;
+            if( $object !== '/' && !empty( $object ) ) {
+                $metadata = $this->dbxClient->getMetadata( $object );
+                if( $metadata !== null ) {
+                    $this->dbxClient->delete( $object );
+                }
             }
         }
     }
