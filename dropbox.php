@@ -332,6 +332,14 @@ class DropboxPlugin extends Plugin
         $object = DBX_SYNC_LOCAL . $content;
         if ( file_exists( $object ) ) {
             if( is_dir( $object ) ){
+                $inner_objects = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( $object ), \RecursiveIteratorIterator::CHILD_FIRST );
+                foreach ($inner_objects as $inner_object) {
+                    if( $inner_object->isDir() ) {
+                        rmdir( $inner_object );
+                    } else {
+                        unlink( $inner_object );
+                    }
+                }
                 rmdir( $object );
             } else {
                 unlink( $object );
