@@ -12,17 +12,14 @@ A highly alpha, yet working Dropbox plugin for Grav.
 
 ### Requirements
 * [PHP Oauth extension](https://secure.php.net/manual/en/oauth.installation.php)
-* PHP 5.3+, [with 64-bit integers](http://stackoverflow.com/questions/864058/how-to-have-64-bit-integer-on-php).
 * [PHP cURL extension](https://secure.php.net/manual/en/curl.installation.php) with SSL enabled (it's usually built-in).
+* PHP 5.3+, [with 64-bit integers](http://stackoverflow.com/questions/864058/how-to-have-64-bit-integer-on-php).
 * Must not be using [`mbstring.func_overload`](http://www.php.net/manual/en/mbstring.overload.php) to overload PHP's standard string functions.
 
 ### Recommendations
 * Grav cache enabled (using with cache disabled is currently untested)
-  * If the cache is disabled this plugin will create it's own cache using json files (untested)
-* SSL (there are lots of free SSL options):
-  1. [Cloudflare](https://www.cloudflare.com/ssl)
-  2. [StartSSL](https://www.startssl.com/)
-  3. [Et cetra](https://www.google.com/search?q=free+ssl+certificates)
+  * If the cache is disabled this plugin will create its own cache using json files (untested)
+* SSL (there are lots of free SSL options like [Cloudflare](https://www.cloudflare.com/ssl), [StartSSL](https://www.startssl.com/), [etc.](https://www.google.com/search?q=free+ssl+certificates))
 
 ### Getting Started
 *[This is the official webhook guide from dropbox](https://www.dropbox.com/developers/webhooks/tutorial), but the instructions below are probably more helpful.*
