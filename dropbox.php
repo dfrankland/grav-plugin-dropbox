@@ -68,7 +68,7 @@ class DropboxPlugin extends Plugin
                         exit;
                     }
                     // Manually check for changed files
-                    elseif ( in_array( getenv('REMOTE_ADDR'), array( "127.0.0.7", "::1" ) ) ) {
+                    elseif ( in_array( getenv('REMOTE_ADDR'), array( "127.0.0.1", "::1" ) ) ) {
                         if ( $this->getClient() !== false ) {
                             $this->youreMine();
                         }
