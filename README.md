@@ -70,6 +70,6 @@ Please, follow the "Getting Started" instructions above before following these s
 
 ##### Syncing Grav to Dropbox:
 1. In the Grav Dropbox plugin folder inside `grav/user/plugins/dropbox/synchronize` add files, folders, or make modifications to them like normal.
-2. Make a request to "https://{yourdomain.tld}/dropbox". This can be done manually by using your browser, `curl`ing, or using [the tool provided by Dropbox](https://github.com/dropbox/dropbox_hook). It would be a great idea to set this on a cron schedule to check every couple of minutes!
+2. Make a request to "//127.0.0.1/dropbox" or follow the "Syncing Dropbox to Grav" instructions since it check for files changed on Grav too. You can use [this tool provided by Dropbox](https://github.com/dropbox/dropbox_hook) which will sync changes from Dropbox and second check for changes to sync from Grav. Making a request to this plugin is set to only listen on localhost for security reasons. If you make a request using the localhost loop-back this can be done manually by using your browser, `curl`ing, etc. It would be a great idea to set this on a cron schedule to check every couple of minutes!
 3. Watch for Dropbox to sync the new or modified content to the app folder inside the `/App/{app name}` folder.
 4. Check the log at `grav/logs/grav.log` for errors. If any exceptions occur please [report an issue](https://github.com/dfrankland/grav-plugin-dropbox/issues/new).
