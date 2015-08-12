@@ -122,9 +122,9 @@ class DropboxPlugin extends Plugin
                 $delta = $this->dbxClient->getDelta( $cursor, DBX_SYNC_REMOTE );
                 foreach ( $delta['entries'] as $entry ) {
                     if( $entry[1] === null ) {
-                        $contents[] = array( $entry[0], null, null );
+                        $contents[] = array( $entry[0], null, null, null, null );
                     } else {
-                        $contents[] = array( $entry[0], $entry[1]['modified'], $entry[1]['is_dir'], $entry[1]['rev'] );
+                        $contents[] = array( $entry[0], $entry[1]['path'], strtotime( $entry[1]['modified'] ), $entry[1]['is_dir'], $entry[1]['rev'] );
                     }
                 }
                 $this->imYours( $contents, DBX_SYNC_REMOTE ) ;
@@ -138,9 +138,9 @@ class DropboxPlugin extends Plugin
                 while ( $has_more ) {
                     $delta = $this->dbxClient->getDelta( $cursor, DBX_SYNC_REMOTE );
                     if( $entry[1] === null ) {
-                        $contents[] = array( $entry[0], null, null );
+                        $contents[] = array( $entry[0], null, null, null, null );
                     } else {
-                        $contents[] = array( $entry[0], $entry[1]['modified'], $entry[1]['is_dir'], $entry[1]['rev'] );
+                        $contents[] = array( $entry[0], $entry[1]['path'], strtotime( $entry[1]['modified'] ), $entry[1]['is_dir'], $entry[1]['rev'] );
                     }
                     $this->imYours( $contents ) ;
                     $cursor = $delta['cursor'];
@@ -157,25 +157,37 @@ class DropboxPlugin extends Plugin
         if ( CACHE_ENABLED === true ) {
             foreach( $contents as $content ){
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
+                list( $object, $path , $mtime ) = $this->cache->fetch( $dbx_cache_id );
                 if( $content[1] !== null ) {
                     list( $object, $mtime, $dir ) = $this->cache->fetch( $dbx_cache_id );
-                    if ( $object === null || $object !== null && strtotime( $mtime ) < strtotime( $content[1] ) ) {
-                        $content[1] = $this->getFile( $content );
+                    if ( $object === null || $object !== null && $mtime < $content[2] ) {
+                        $content[2] = $this->getFile( $content );
                         $this->cache->save( $dbx_cache_id, $content );
                     }
                 } else {
-                    $this->deleteLocalFile( $content[0] );
+                    $this->deleteLocalFile( $path );
                     if( $this->cache->fetch( $dbx_cache_id ) !== null ){
-                        $this->cache->save( $dbx_cache_id, array( null, null, null, null ) );
+                        $this->cache->save( $dbx_cache_id, array( null, null, null, null, null ) );
                     }
                 }
             }
         } else {
             foreach( $contents as $content ){
+                if ( file_exists( SYNCPATHS_FILE ) ) {
+                    $localSyncPaths = json_decode ( file_get_contents( SYNCPATHS_FILE ) );
+                }
                 if( $content[1] !== null ) {
                     $this->getFile( $content );
+                    $localSyncPaths[] = $content;
+                    file_put_contents( SYNCPATHS_FILE, json_encode( $localSyncPaths ) );
                 } else {
-                    $this->deleteLocalFile( $content[0] );
+                    foreach( $localSyncPaths as $index => $localSyncPath ) {
+                        if( $content[0] === $localSyncPath[0] ) {
+                            $this->deleteLocalFile( $localSyncPath[1] );
+                            unset( $localSyncPaths[ $index ] );
+                        }
+                        file_put_contents( SYNCPATHS_FILE, json_encode( $localSyncPaths ) );
+                    }
                 }
             }
         }
@@ -189,12 +201,12 @@ class DropboxPlugin extends Plugin
         if ( CACHE_ENABLED === true ) {
             foreach( $contents as $content ){
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
-                list( $object, $mtime, $dir, $rev ) = $this->cache->fetch( $dbx_cache_id );
+                list( $object, , $mtime ) = $this->cache->fetch( $dbx_cache_id );
                 if ( $object === null ) {
                     $this->uploadFile( $content );
                     $this->cache->save( $dbx_cache_id, $content );
-                } elseif ( $object !== null && $mtime < $content[1]  ) {
-                    $this->uploadFile( $content, $rev );
+                } elseif ( $object !== null && $mtime < $content[2]  ) {
+                    $this->uploadFile( $content );
                     $this->cache->save( $dbx_cache_id, $content );
                 }
             }
@@ -210,7 +222,7 @@ class DropboxPlugin extends Plugin
         $contents = array();
         $objects = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( DBX_SYNC_LOCAL ) );
         if ( CACHE_ENABLED === true ){
-            $dbx_cache_id = md5( "localContent" );
+            $dbx_cache_id = md5( "dbxLocalContent" );
             list( $oldLocalSyncPaths ) = $this->cache->fetch( $dbx_cache_id );
         } else {
             if ( file_exists( SYNCPATHS_FILE ) ) {
@@ -248,7 +260,7 @@ class DropboxPlugin extends Plugin
                 }
             }
             if( !empty( $object ) ) {
-                $contents[] = array( $object, $mtime, $dir, null );
+                $contents[] = array( strtolower($object), $object, $mtime, $dir, null );
             }
         }
         if( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
@@ -268,10 +280,10 @@ class DropboxPlugin extends Plugin
 
     private function getFile ( $content )
     {
-        $localSyncPath = DBX_SYNC_LOCAL . $content[0];
-        if ( $content[2] === false ){
-            $remoteSyncPath = DBX_SYNC_REMOTE . $content[0];
-            $tempLocalPath = DBX_TMP_DIR . basename( $content[0] );
+        $localSyncPath = DBX_SYNC_LOCAL . $content[1];
+        if ( $content[3] === false ){
+            $remoteSyncPath = DBX_SYNC_REMOTE . $content[1];
+            $tempLocalPath = DBX_TMP_DIR . basename( $content[1] );
             $parentSyncPath = dirname( $localSyncPath );
             if ( !file_exists( $parentSyncPath ) ) {
                 mkdir( $parentSyncPath, 0777, true );
@@ -288,25 +300,25 @@ class DropboxPlugin extends Plugin
         return stat( $localSyncPath )['mtime'];
     }
 
-    private function uploadFile ( $content, $rev = false )
+    private function uploadFile ( $content )
     {
-        $remoteSyncPath = DBX_SYNC_REMOTE . $content[0];
-        $localSyncPath = DBX_SYNC_LOCAL . $content[0];
+        $remoteSyncPath = DBX_SYNC_REMOTE . $content[1];
+        $localSyncPath = DBX_SYNC_LOCAL . $content[1];
         $pathError = dbx\Path::findError( $remoteSyncPath );
         if ( $pathError !== null ) {
             $this->grav['log']->error("Dropbox remote sync path error: $pathError");
         } else {
-            if ( $content[2] === false ) {
+            if ( $content[3] === false ) {
                 $size = null;
                 if ( stream_is_local( $localSyncPath ) ) {
                     $size = filesize( $localSyncPath );
                 }
                 $writeMode = dbx\WriteMode::add();
-                if( $rev !== false && $rev !== null ){
+                if( $content[4] !== null ){
                     $writeMode = dbx\WriteMode::update( $rev );
                 }
                 $f = fopen( $localSyncPath, "rb" );
-                $metadat = $this->dbxClient->uploadFile( $remoteSyncPath, $writeMode, $f, $size );
+                $metadata = $this->dbxClient->uploadFile( $remoteSyncPath, $writeMode, $f, $size );
                 fclose( $f );
                 // TODO: check metadata for if file was renamed to prevent file feedback loop
             } else {
