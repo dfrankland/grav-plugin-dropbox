@@ -28,28 +28,31 @@ form:
       type: text
       label: Route
       placeholder: /dropbox
-      help: URI route that calls the dropbox function.
+      help: Dropbox Webhook URI route for synchronization.
       validate:
         pattern: "/([a-z\-_]+/?)+"
     app.key:
       type: text
-      label: Dropbox Public Key
-      placeholder: "Public Key"
+      label: Dropbox App Key
+      placeholder: "Your App Key"
+      help: Get this from https://dropbox.com/developers/apps.
     app.secret:
       type: text
-      label: Dropbox Secret Key
-      placeholder: "Secret Key"
+      label: Dropbox App Secret
+      placeholder: "Your App Secret"
+      help: Get this from https://dropbox.com/developers/apps.
     app.token:
       type: text
-      label: Dropbox Token
-      placeholder: "Token"
+      label: Dropbox Oauth2 Token
+      placeholder: "Your Oauth2 Token"
+      help: https://blogs.dropbox.com/developers/2014/05/generate-an-access-token-for-your-own-account/
     sync.remote:
       type: text
-      label: Remote Folder
+      label: Remote Sync Folder
       placeholder: ""
-      help: Dropbox folder to place files
+      help: Dropbox folder to synchronize files.
     sync.local:
       type: text
-      label: Local Folder
+      label: Local Sync Folder
       placeholder: "synchronize"
-      help: Local folde to place files.
+      help: Local folder to synchronize files (relative location to this plugin).
