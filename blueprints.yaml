@@ -10,3 +10,46 @@ homepage: https://github.com/dfrankland/grav-plugin-dropbox
 keywords: dropbox, file, files, sync, plugin
 bugs: https://github.com/dfrankland/grav-plugin-dropbox/issues
 license: MIT
+
+form:
+  validation: strict
+  fields:
+    enabled:
+      type: toggle
+      label: Plugin status
+      highlight: 1
+      default: 0
+      options:
+        1: Enabled
+        0: Disabled
+      validate:
+        type: bool
+    route:
+      type: text
+      label: Route
+      placeholder: /dropbox
+      help: URI route that calls the dropbox function.
+      validate:
+        pattern: "/([a-z\-_]+/?)+"
+    app.key:
+      type: text
+      label: Dropbox Public Key
+      placeholder: "Public Key"
+    app.secret:
+      type: text
+      label: Dropbox Secret Key
+      placeholder: "Secret Key"
+    app.token:
+      type: text
+      label: Dropbox Token
+      placeholder: "Token"
+    sync.remote:
+      type: text
+      label: Remote Folder
+      placeholder: ""
+      help: Dropbox folder to place files
+    sync.local:
+      type: text
+      label: Local Folder
+      placeholder: "synchronize"
+      help: Local folde to place files.
