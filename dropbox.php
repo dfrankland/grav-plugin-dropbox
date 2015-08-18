@@ -280,7 +280,7 @@ class DropboxPlugin extends Plugin
                 $dir = false;
             }
             $mtime = stat( $object )['mtime'];
-            $object = str_replace( DBX_SYNC_LOCAL, '', $object);
+            $object = str_replace( DBX_SYNC_LOCAL, '', $object );
             $localSyncPaths[] = $object;
             if( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
                 $needle = $object;
