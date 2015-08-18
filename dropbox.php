@@ -197,15 +197,17 @@ class DropboxPlugin extends Plugin
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
                 list( $object, $path , $mtime ) = $this->cache->fetch( $dbx_cache_id );
                 if( $content[1] !== null ) {
-                    list( $object, $mtime, $dir ) = $this->cache->fetch( $dbx_cache_id );
+                    $content[1] = $this->getCaseSensitivePath( $content[1] );
                     if ( $object === null || $object !== null && $mtime < $content[2] ) {
                         $content[2] = $this->getFile( $content );
-                        $this->cache->save( $dbx_cache_id, $content );
+                        if ( $content[2] !== false ) { // Don't cache timed out files
+                            $this->cache->save( $dbx_cache_id, $content );
+                        }
                     }
                 } else {
                     $this->deleteLocalFile( $path );
                     if( $this->cache->fetch( $dbx_cache_id ) !== null ){
-                        $this->cache->save( $dbx_cache_id, array( null, null, null, null, null ) );
+                        $this->cache->save( $dbx_cache_id, array( $content[0], null, null, null, null ) );
                     }
                 }
             }
@@ -327,6 +329,77 @@ class DropboxPlugin extends Plugin
         } else {
             return ( $aDepth < $bDepth ) ? -1 : 1;
         }
+    }
+
+    private function getCaseSensitivePath ( $caseInsensitivePath )
+    {
+        $caseSensitivePath = "";
+        while ( $caseInsensitivePath !== false ) {
+            list( $caseSensitivePath, $caseInsensitivePath ) = $this->getCaseSensitiveMetadata( $caseInsensitivePath, $caseSensitivePath );
+            if( $caseInsensitivePath === false ) {
+                return $caseSensitivePath;
+            }
+            $caseInsensitiveFileExists = $this->fileExistsCI( $caseInsensitivePath );
+            if( $caseInsensitiveFileExists !== false ) {
+                return $caseInsensitiveFileExists . $caseSensitivePath;
+            }
+            $caseInsensitivePath = $this->dbxClient->getMetadata( $caseInsensitivePath )['path'];
+        }
+    }
+
+    private function getCaseSensitiveMetadata ( $caseInsensitivePath, $caseSensitivePath = "" ) {
+        $pathParts = explode( '/', $caseInsensitivePath );
+        $pathLevels = count( $pathParts );
+        $caseSensitivePath = "/" . array_pop( $pathParts ) . $caseSensitivePath;
+        $pathLevels--;
+        if( $pathLevels === 1 ) {
+            return array( $caseSensitivePath, false );
+        } elseif ( $pathLevels >= 2 ) {
+            $caseSensitivePath = "/" . array_pop( $pathParts ) . $caseSensitivePath;
+            $pathLevels--;
+            if( $pathLevels === 1 ) {
+                return array( $caseSensitivePath, false );
+            }
+        }
+        $caseInsensitivePath = implode( '/', $pathParts );
+        return array( $caseSensitivePath, $caseInsensitivePath );
+    }
+
+    private function fileExistsSingle( $file )
+    {
+        if ( file_exists( $file ) === true ) {
+            return $file;
+        }
+        $lowerfile = strtolower( $file );
+        foreach ( glob ( dirname( $file ) . '/*') as $file ) {
+            if ( strtolower( $file ) === $lowerfile ) {
+                return $file;
+            }
+        }
+        return false;
+    }
+
+    private function fileExistsCI( $filePath )
+    {
+        $localFilePath = DBX_SYNC_LOCAL . $filePath;
+
+        if ( file_exists( $localFilePath ) === true ) {
+            return $filePath;
+        }
+        // Split directory up into parts.
+        $dirs = explode( '/', $localFilePath );
+        $len = count( $dirs );
+        $dir = '/';
+        foreach ( $dirs as $i => $part ) {
+            $dirpath = $this->fileExistsSingle( $dir . $part );
+            if ( $dirpath === false ) {
+                return false;
+            }
+            $dir = $dirpath;
+            $dir .= ( ( $i > 0 ) && ( $i < $len - 1 ) ) ? '/' : '';
+        }
+        $dir = str_replace( DBX_SYNC_LOCAL, '', $dir );
+        return $dir;
     }
 
     private function getFile ( $content )
