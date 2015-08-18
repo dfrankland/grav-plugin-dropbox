@@ -114,7 +114,9 @@ class DropboxPlugin extends Plugin
     {
         $cursor = null;
         $has_more = true;
-        $contents = array();
+        $contentsDelete = array();
+        $contentsDirs = array();
+        $contentsFiles = array();
         if ( CACHE_ENABLED === true ) {
             $dbx_cache_id = md5( "dbxCursor" . DBX_SYNC_REMOTE );
             list( $cursor ) = $this->cache->fetch( $dbx_cache_id );
@@ -122,12 +124,29 @@ class DropboxPlugin extends Plugin
                 $delta = $this->dbxClient->getDelta( $cursor, DBX_SYNC_REMOTE );
                 foreach ( $delta['entries'] as $entry ) {
                     if( $entry[1] === null ) {
-                        $contents[] = array( $entry[0], null, null, null, null );
+                        $contentsDelete[] = array( $entry[0], null, null, null, null );
                     } else {
-                        $contents[] = array( $entry[0], $entry[1]['path'], strtotime( $entry[1]['modified'] ), $entry[1]['is_dir'], $entry[1]['rev'] );
+                        $contents =
+                            array(
+                                $entry[0], // Dropbox entry
+                                $entry[1]['path'], // CaSe SENSITIVE path
+                                strtotime( $entry[1]['modified'] ), // Unix time of modifcation
+                                $entry[1]['is_dir'], // If this is a directory
+                                $entry[1]['rev'] // Dropbox revision code
+                            );
+                        if( $contents[3] === true ) {
+                            $contentsDirs[] = $contents;
+                        } else {
+                            $contentsFiles[] = $contents;
+                        }
                     }
                 }
-                $this->imYours( $contents, DBX_SYNC_REMOTE ) ;
+                usort( $contentsDelete, array( $this, 'sortCaseSensitvePath' ) );
+                usort( $contentsDirs, array( $this, 'sortCaseSensitvePath' ) );
+                usort( $contentsFiles, array( $this, 'sortCaseSensitvePath' ) );
+                $this->imYours( $contentsDelete );
+                $this->imYours( $contentsDirs );
+                $this->imYours( $contentsFiles );
                 $cursor = $delta['cursor'];
                 $this->cache->save( $dbx_cache_id, array( $cursor ) );
                 $has_more = $delta['has_more'];
@@ -137,12 +156,31 @@ class DropboxPlugin extends Plugin
                 $cursor = file_get_contents( CURSOR_FILE );
                 while ( $has_more ) {
                     $delta = $this->dbxClient->getDelta( $cursor, DBX_SYNC_REMOTE );
-                    if( $entry[1] === null ) {
-                        $contents[] = array( $entry[0], null, null, null, null );
-                    } else {
-                        $contents[] = array( $entry[0], $entry[1]['path'], strtotime( $entry[1]['modified'] ), $entry[1]['is_dir'], $entry[1]['rev'] );
+                    foreach ( $delta['entries'] as $entry ) {
+                        if( $entry[1] === null ) {
+                            $contentsDelete[] = array( $entry[0], null, null, null, null );
+                        } else {
+                            $contents =
+                                array(
+                                    $entry[0], // Dropbox entry
+                                    $entry[1]['path'], // CaSe SENSITIVE path
+                                    strtotime( $entry[1]['modified'] ), // Unix time of modifcation
+                                    $entry[1]['is_dir'], // If this is a directory
+                                    $entry[1]['rev'] // Dropbox revision code
+                                );
+                            if( $contents[3] === true ) {
+                                $contentsDirs[] = $contents;
+                            } else {
+                                $contentsFiles[] = $contents;
+                            }
+                        }
                     }
-                    $this->imYours( $contents ) ;
+                    usort( $contentsDelete, array( $this, 'sortCaseSensitvePath' ) );
+                    usort( $contentsDirs, array( $this, 'sortCaseSensitvePath' ) );
+                    usort( $contentsFiles, array( $this, 'sortCaseSensitvePath' ) );
+                    $this->imYours( $contentsDelete );
+                    $this->imYours( $contentsDirs );
+                    $this->imYours( $contentsFiles );
                     $cursor = $delta['cursor'];
                     file_put_contents( CURSOR_FILE, $cursor );
                     $has_more = $delta['has_more'];
@@ -159,15 +197,17 @@ class DropboxPlugin extends Plugin
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
                 list( $object, $path , $mtime ) = $this->cache->fetch( $dbx_cache_id );
                 if( $content[1] !== null ) {
-                    list( $object, $mtime, $dir ) = $this->cache->fetch( $dbx_cache_id );
+                    $content[1] = $this->getCaseSensitivePath( $content[1] );
                     if ( $object === null || $object !== null && $mtime < $content[2] ) {
                         $content[2] = $this->getFile( $content );
-                        $this->cache->save( $dbx_cache_id, $content );
+                        if ( $content[2] !== false ) { // Don't cache timed out files
+                            $this->cache->save( $dbx_cache_id, $content );
+                        }
                     }
                 } else {
                     $this->deleteLocalFile( $path );
                     if( $this->cache->fetch( $dbx_cache_id ) !== null ){
-                        $this->cache->save( $dbx_cache_id, array( null, null, null, null, null ) );
+                        $this->cache->save( $dbx_cache_id, array( $content[0], null, null, null, null ) );
                     }
                 }
             }
@@ -242,7 +282,7 @@ class DropboxPlugin extends Plugin
                 $dir = false;
             }
             $mtime = stat( $object )['mtime'];
-            $object = str_replace( DBX_SYNC_LOCAL, '', $object);
+            $object = str_replace( DBX_SYNC_LOCAL, '', $object );
             $localSyncPaths[] = $object;
             if( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
                 $needle = $object;
@@ -276,6 +316,90 @@ class DropboxPlugin extends Plugin
             }
         }
         return $contents;
+    }
+
+    private static function sortCaseSensitvePath ( $a, $b )
+    {
+        $a = $a[0];
+        $b = $b[0];
+        $aDepth = substr_count( '/', $a );
+        $bDepth = substr_count( '/', $b );
+        if( $aDepth === $bDepth ) {
+            return strcmp( $bDepth, $aDepth );
+        } else {
+            return ( $aDepth < $bDepth ) ? -1 : 1;
+        }
+    }
+
+    private function getCaseSensitivePath ( $caseInsensitivePath )
+    {
+        $caseSensitivePath = "";
+        while ( $caseInsensitivePath !== false ) {
+            list( $caseSensitivePath, $caseInsensitivePath ) = $this->getCaseSensitiveMetadata( $caseInsensitivePath, $caseSensitivePath );
+            if( $caseInsensitivePath === false ) {
+                return $caseSensitivePath;
+            }
+            $caseInsensitiveFileExists = $this->fileExistsCI( $caseInsensitivePath );
+            if( $caseInsensitiveFileExists !== false ) {
+                return $caseInsensitiveFileExists . $caseSensitivePath;
+            }
+            $caseInsensitivePath = $this->dbxClient->getMetadata( $caseInsensitivePath )['path'];
+        }
+    }
+
+    private function getCaseSensitiveMetadata ( $caseInsensitivePath, $caseSensitivePath = "" ) {
+        $pathParts = explode( '/', $caseInsensitivePath );
+        $pathLevels = count( $pathParts );
+        $caseSensitivePath = "/" . array_pop( $pathParts ) . $caseSensitivePath;
+        $pathLevels--;
+        if( $pathLevels === 1 ) {
+            return array( $caseSensitivePath, false );
+        } elseif ( $pathLevels >= 2 ) {
+            $caseSensitivePath = "/" . array_pop( $pathParts ) . $caseSensitivePath;
+            $pathLevels--;
+            if( $pathLevels === 1 ) {
+                return array( $caseSensitivePath, false );
+            }
+        }
+        $caseInsensitivePath = implode( '/', $pathParts );
+        return array( $caseSensitivePath, $caseInsensitivePath );
+    }
+
+    private function fileExistsSingle( $file )
+    {
+        if ( file_exists( $file ) === true ) {
+            return $file;
+        }
+        $lowerfile = strtolower( $file );
+        foreach ( glob ( dirname( $file ) . '/*') as $file ) {
+            if ( strtolower( $file ) === $lowerfile ) {
+                return $file;
+            }
+        }
+        return false;
+    }
+
+    private function fileExistsCI( $filePath )
+    {
+        $localFilePath = DBX_SYNC_LOCAL . $filePath;
+
+        if ( file_exists( $localFilePath ) === true ) {
+            return $filePath;
+        }
+        // Split directory up into parts.
+        $dirs = explode( '/', $localFilePath );
+        $len = count( $dirs );
+        $dir = '/';
+        foreach ( $dirs as $i => $part ) {
+            $dirpath = $this->fileExistsSingle( $dir . $part );
+            if ( $dirpath === false ) {
+                return false;
+            }
+            $dir = $dirpath;
+            $dir .= ( ( $i > 0 ) && ( $i < $len - 1 ) ) ? '/' : '';
+        }
+        $dir = str_replace( DBX_SYNC_LOCAL, '', $dir );
+        return $dir;
     }
 
     private function getFile ( $content )
