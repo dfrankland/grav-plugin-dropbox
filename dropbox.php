@@ -415,6 +415,16 @@ class DropboxPlugin extends Plugin
             $f = fopen( $tempLocalPath, 'w+b' );
             $this->dbxClient->getFile( $remoteSyncPath, $f );
             fclose( $f );
+            $i = 0;
+            for( $i = 0; $i < 60 * 3; $i++ ) {
+                if( file_exists( $tempLocalPath ) === true ) {
+                    break;
+                }
+                sleep(1);
+            }
+            if ( file_exists( $tempLocalPath ) === false ){
+                return false;
+            }
             rename( $tempLocalPath, $localSyncPath );
         } else {
             if ( !file_exists( $localSyncPath ) ) {
