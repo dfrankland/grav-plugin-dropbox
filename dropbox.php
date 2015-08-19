@@ -58,7 +58,7 @@ class DropboxPlugin extends Plugin
 
         $request = getenv('REQUEST_METHOD');
         if ( $request === null ) {
-            // TODO: 404;
+            $this->grav['page']->header()->http_response_code = 404;
         } else {
             switch ( $request ) {
                 case 'GET':
@@ -71,21 +71,23 @@ class DropboxPlugin extends Plugin
                     elseif ( in_array( getenv('REMOTE_ADDR'), array( "127.0.0.1", "::1" ) ) ) {
                         if ( $this->getClient() !== false ) {
                             $this->youreMine();
+                            $this->grav['page']->header()->http_response_code = 200;
                         }
                     }
                     // 404 for non-local clients that aren't challenging
                     else {
-                        // TODO: 404;
+                        $this->grav['page']->header()->http_response_code = 404;
                     }
                     break;
                 case 'POST':
                     // Get notifications for changed files
                     if ( $this->signedSealed() === true && $this->getClient() === true ){
                             $this->delivered();
+                            $this->grav['page']->header()->http_response_code = 200;
                     }
                     // 403 for unauthorized posts
                     else {
-                        // TODO: 403;
+                        $this->grav['page']->header()->http_response_code = 403;
                     }
                     break;
             }
