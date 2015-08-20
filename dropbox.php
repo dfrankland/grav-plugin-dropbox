@@ -184,7 +184,7 @@ class DropboxPlugin extends Plugin
                     $this->imYours( $contentsDirs );
                     $this->imYours( $contentsFiles );
                     $cursor = $delta['cursor'];
-                    file_put_contents( CURSOR_FILE, $cursor );
+                    $this->createLocal( "file", CURSOR_FILE, "put", $cursor );
                     $has_more = $delta['has_more'];
                 }
             }
@@ -221,14 +221,14 @@ class DropboxPlugin extends Plugin
                 if( $content[1] !== null ) {
                     $this->getFile( $content );
                     $localSyncPaths[] = $content;
-                    file_put_contents( SYNCPATHS_FILE, json_encode( $localSyncPaths ) );
+                    $this->createLocal( "file", SYNCPATHS_FILE, "put", json_encode( $localSyncPaths ) );
                 } else {
                     foreach( $localSyncPaths as $index => $localSyncPath ) {
                         if( $content[0] === $localSyncPath[0] ) {
                             $this->deleteLocalFile( $localSyncPath[1] );
                             unset( $localSyncPaths[ $index ] );
                         }
-                        file_put_contents( SYNCPATHS_FILE, json_encode( $localSyncPaths ) );
+                        $this->createLocal( "file", SYNCPATHS_FILE, "put", json_encode( $localSyncPaths ) );
                     }
                 }
             }
@@ -314,7 +314,7 @@ class DropboxPlugin extends Plugin
             $this->cache->save( $dbx_cache_id, array( $localSyncPaths ) );
         } else {
             if ( !file_exists( SYNCPATHS_FILE ) ) {
-                file_put_contents( SYNCPATHS_FILE, json_encode( $localSyncPaths ) );
+                $this->createLocal( "file", SYNCPATHS_FILE, "put", json_encode( $localSyncPaths ) );
             }
         }
         return $contents;
@@ -410,14 +410,10 @@ class DropboxPlugin extends Plugin
         if ( $content[3] === false ){
             $remoteSyncPath = DBX_SYNC_REMOTE . $content[1];
             $tempLocalPath = DBX_TMP_DIR . basename( $content[1] );
-            $parentSyncPath = dirname( $localSyncPath );
-            if ( !file_exists( $parentSyncPath ) ) {
-                mkdir( $parentSyncPath, 0777, true );
-            }
-            $f = fopen( $tempLocalPath, 'w+b' );
-            $this->dbxClient->getFile( $remoteSyncPath, $f );
-            fclose( $f );
-            $i = 0;
+            $this->createLocal( "dir", dirname( $localSyncPath ) );
+            $fp = $this->createLocal( "file", $tempLocalPath, "open" );
+            $this->dbxClient->getFile( $remoteSyncPath, $fp );
+            $this->createLocal( "file", $tempLocalPath, "close", $fp );
             for( $i = 0; $i < 60 * 3; $i++ ) {
                 if( file_exists( $tempLocalPath ) === true ) {
                     break;
@@ -429,9 +425,7 @@ class DropboxPlugin extends Plugin
             }
             rename( $tempLocalPath, $localSyncPath );
         } else {
-            if ( !file_exists( $localSyncPath ) ) {
-                mkdir( $localSyncPath, 0777, true );
-            }
+            $this->createLocal( "dir", $localSyncPath );
         }
         return stat( $localSyncPath )['mtime'];
     }
@@ -460,6 +454,45 @@ class DropboxPlugin extends Plugin
             } else {
                 $this->dbxClient->createFolder( $remoteSyncPath );
             }
+        }
+    }
+
+    private function createLocal ( $type, $name, $action = null, $data = null )
+    {
+        switch ( $type ) {
+            case "file":
+                switch ( $action ) {
+                    case "open":
+                        $fp = fopen( $name, "w+b" );
+                        if ( flock( $fp, LOCK_EX | LOCK_NB ) ) {
+                            return $fp;
+                        } else {
+                            // TODO: throw error;
+                        }
+                        break;
+                    case "close":
+                        $fp = $data;
+                        flock( $fp, LOCK_UN );
+                        fclose( $fp );
+                        $oldmask = umask(0);
+                        chmod( $name, 0660 );
+                        umask( $oldmask );
+                        break;
+                    case "put":
+                        file_put_contents( $name, $data, LOCK_EX | LOCK_NB );
+                        $oldmask = umask(0);
+                        chmod( $name, 0660 );
+                        umask( $oldmask );
+                        break;
+                }
+                break;
+            case "dir":
+                if ( !file_exists( $name ) ) {
+                    $oldmask = umask(0);
+                    mkdir( $name, 0770, true );
+                    umask( $oldmask );
+                }
+                break;
         }
     }
 
