@@ -244,11 +244,10 @@ class DropboxPlugin extends Plugin
             foreach ( $contents as $content ){
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
                 list( $object, , $mtime ) = $this->cache->fetch( $dbx_cache_id );
-                if ( $object === null ) {
-                    $this->uploadFile( $content );
-                    $this->cache->save( $dbx_cache_id, $content );
-                } elseif ( $object !== null && $mtime < $content[2]  ) {
-                    $this->uploadFile( $content );
+                if ( $object === null || $object !== null && $mtime < $content[2] ) {
+                    $metadata = $this->uploadFile( $content );
+                    $content[2] = $metadata['modified'];
+                    $content[4] = $metadata['rev'];
                     $this->cache->save( $dbx_cache_id, $content );
                 }
             }
@@ -437,6 +436,7 @@ class DropboxPlugin extends Plugin
         $remoteSyncPath = DBX_SYNC_REMOTE . $content[1];
         $localSyncPath = DBX_SYNC_LOCAL . $content[1];
         $pathError = dbx\Path::findError( $remoteSyncPath );
+        $tempLocalPath = DBX_TMP_DIR . basename( $content[1] );
         if ( $pathError !== null ) {
             $this->grav['log']->error("Dropbox remote sync path error: $pathError");
         } else {
@@ -449,10 +449,24 @@ class DropboxPlugin extends Plugin
                 if ( $content[4] !== null ){
                     $writeMode = dbx\WriteMode::update( $rev );
                 }
-                $f = fopen( $localSyncPath, "rb" );
-                $metadata = $this->dbxClient->uploadFile( $remoteSyncPath, $writeMode, $f, $size );
-                fclose( $f );
-                // TODO: check metadata for if file was renamed to prevent file feedback loop
+                $fp = fopen( $localSyncPath, "rb" );
+                $metadata = $this->dbxClient->uploadFile( $remoteSyncPath, $writeMode, $fp, $size );
+                fclose( $fp );
+                $metadata['modified'] = strtotime( $metadata['modified'] );
+                try {
+                    $touched = touch( $localSyncPath, $metadata['modified'] );
+                }
+                catch ( \Exception $e ) {
+                    $touched = false;
+                }
+                if( $touched === false ){
+                    copy( $localSyncPath, $tempLocalPath );
+                    unlink( $localSyncPath );
+                    rename( $tempLocalPath, $localSyncPath );
+                    touch( $localSyncPath, $metadata['modified'] );
+                }
+                clearstatcache( true, $localSyncPath );
+                return $metadata;
             } else {
                 $this->dbxClient->createFolder( $remoteSyncPath );
             }
