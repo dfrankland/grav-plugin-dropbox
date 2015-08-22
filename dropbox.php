@@ -6,8 +6,8 @@ use Grav\Common\Cache;
 
 define( 'DBX_DIR', USER_DIR . 'plugins/dropbox/' );
 define( 'DBX_TMP_DIR', USER_DIR . 'plugins/dropbox/.temp/' );
-define( 'CURSOR_FILE', DBX_DIR . 'cursor' );
-define( 'SYNCPATHS_FILE', DBX_DIR . 'syncpaths');
+define( 'CURSOR_FILE', DBX_DIR . '.cursor' );
+define( 'SYNCPATHS_FILE', DBX_DIR . '.syncpaths');
 
 require_once DBX_DIR . 'vendor/autoload.php';
 
