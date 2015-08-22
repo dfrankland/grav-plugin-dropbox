@@ -95,7 +95,7 @@ class DropboxPlugin extends Plugin
     }
 
     // Check if post is made by Dropbox
-    private function signedSealed()
+    private function signedSealed ()
     {
         $signature = getenv('HTTP_X_DROPBOX_SIGNATURE');
         if ( $signature === null || empty( $signature ) ){
@@ -112,7 +112,7 @@ class DropboxPlugin extends Plugin
     }
 
     // Check Dropbox notification for changed files based on hash
-    private function delivered()
+    private function delivered ()
     {
         $cursor = null;
         $has_more = true;
@@ -125,7 +125,7 @@ class DropboxPlugin extends Plugin
             while ( $has_more ) {
                 $delta = $this->dbxClient->getDelta( $cursor, DBX_SYNC_REMOTE );
                 foreach ( $delta['entries'] as $entry ) {
-                    if( $entry[1] === null ) {
+                    if ( $entry[1] === null ) {
                         $contentsDelete[] = array( $entry[0], null, null, null, null );
                     } else {
                         $contents =
@@ -136,7 +136,7 @@ class DropboxPlugin extends Plugin
                                 $entry[1]['is_dir'], // If this is a directory
                                 $entry[1]['rev'] // Dropbox revision code
                             );
-                        if( $contents[3] === true ) {
+                        if ( $contents[3] === true ) {
                             $contentsDirs[] = $contents;
                         } else {
                             $contentsFiles[] = $contents;
@@ -159,7 +159,7 @@ class DropboxPlugin extends Plugin
                 while ( $has_more ) {
                     $delta = $this->dbxClient->getDelta( $cursor, DBX_SYNC_REMOTE );
                     foreach ( $delta['entries'] as $entry ) {
-                        if( $entry[1] === null ) {
+                        if ( $entry[1] === null ) {
                             $contentsDelete[] = array( $entry[0], null, null, null, null );
                         } else {
                             $contents =
@@ -170,7 +170,7 @@ class DropboxPlugin extends Plugin
                                     $entry[1]['is_dir'], // If this is a directory
                                     $entry[1]['rev'] // Dropbox revision code
                                 );
-                            if( $contents[3] === true ) {
+                            if ( $contents[3] === true ) {
                                 $contentsDirs[] = $contents;
                             } else {
                                 $contentsFiles[] = $contents;
@@ -192,13 +192,13 @@ class DropboxPlugin extends Plugin
     }
 
     // Check cache for changed files and download
-    private function imYours( $contents )
+    private function imYours ( $contents )
     {
         if ( CACHE_ENABLED === true ) {
-            foreach( $contents as $content ){
+            foreach ( $contents as $content ){
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
                 list( $object, $path , $mtime ) = $this->cache->fetch( $dbx_cache_id );
-                if( $content[1] !== null ) {
+                if ( $content[1] !== null ) {
                     $content[1] = $this->getCaseSensitivePath( $content[1] );
                     if ( $object === null || $object !== null && $mtime < $content[2] ) {
                         $content[2] = $this->getFile( $content );
@@ -208,23 +208,23 @@ class DropboxPlugin extends Plugin
                     }
                 } else {
                     $this->deleteLocalFile( $path );
-                    if( $this->cache->fetch( $dbx_cache_id ) !== null ){
+                    if ( $this->cache->fetch( $dbx_cache_id ) !== null ){
                         $this->cache->save( $dbx_cache_id, array( $content[0], null, null, null, null ) );
                     }
                 }
             }
         } else {
-            foreach( $contents as $content ){
+            foreach ( $contents as $content ){
                 if ( file_exists( SYNCPATHS_FILE ) ) {
                     $localSyncPaths = json_decode ( file_get_contents( SYNCPATHS_FILE ) );
                 }
-                if( $content[1] !== null ) {
+                if ( $content[1] !== null ) {
                     $this->getFile( $content );
                     $localSyncPaths[] = $content;
                     $this->createLocal( "file", SYNCPATHS_FILE, "put", json_encode( $localSyncPaths ) );
                 } else {
-                    foreach( $localSyncPaths as $index => $localSyncPath ) {
-                        if( $content[0] === $localSyncPath[0] ) {
+                    foreach ( $localSyncPaths as $index => $localSyncPath ) {
+                        if ( $content[0] === $localSyncPath[0] ) {
                             $this->deleteLocalFile( $localSyncPath[1] );
                             unset( $localSyncPaths[ $index ] );
                         }
@@ -237,11 +237,11 @@ class DropboxPlugin extends Plugin
     }
 
     // Check cache for changed files and upload
-    private function youreMine()
+    private function youreMine ()
     {
         $contents = $this->recurse();
         if ( CACHE_ENABLED === true ) {
-            foreach( $contents as $content ){
+            foreach ( $contents as $content ){
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
                 list( $object, , $mtime ) = $this->cache->fetch( $dbx_cache_id );
                 if ( $object === null ) {
@@ -253,13 +253,14 @@ class DropboxPlugin extends Plugin
                 }
             }
         } else {
-            foreach( $contents as $content ){
+            foreach ( $contents as $content ){
                 $this->uploadFile( $content );
             }
         }
     }
 
-    private function recurse(){
+    private function recurse ()
+    {
         $localSyncPaths = array();
         $contents = array();
         $objects = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( DBX_SYNC_LOCAL ) );
@@ -286,27 +287,27 @@ class DropboxPlugin extends Plugin
             $mtime = stat( $object )['mtime'];
             $object = str_replace( DBX_SYNC_LOCAL, '', $object );
             $localSyncPaths[] = $object;
-            if( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
+            if ( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
                 $needle = $object;
                 $found = false;
                 while ( $found === false ) {
                     $found = array_search( $needle, $oldLocalSyncPaths );
-                    if( $found !== false ) {
+                    if ( $found !== false ) {
                         unset( $oldLocalSyncPaths[ $found ] );
                     }
-                    if( $needle !== dirname( $object ) ) {
+                    if ( $needle !== dirname( $object ) ) {
                         $needle = dirname( $object );
                     } else {
                         break;
                     }
                 }
             }
-            if( !empty( $object ) ) {
+            if ( !empty( $object ) ) {
                 $contents[] = array( strtolower($object), $object, $mtime, $dir, null );
             }
         }
-        if( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
-            foreach( $oldLocalSyncPaths as $oldSyncPath ) {
+        if ( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
+            foreach ( $oldLocalSyncPaths as $oldSyncPath ) {
                 $this->deleteRemoteFile( $oldSyncPath );
             }
         }
@@ -326,7 +327,7 @@ class DropboxPlugin extends Plugin
         $b = $b[0];
         $aDepth = substr_count( '/', $a );
         $bDepth = substr_count( '/', $b );
-        if( $aDepth === $bDepth ) {
+        if ( $aDepth === $bDepth ) {
             return strcmp( $bDepth, $aDepth );
         } else {
             return ( $aDepth < $bDepth ) ? -1 : 1;
@@ -338,28 +339,29 @@ class DropboxPlugin extends Plugin
         $caseSensitivePath = "";
         while ( $caseInsensitivePath !== false ) {
             list( $caseSensitivePath, $caseInsensitivePath ) = $this->getCaseSensitiveMetadata( $caseInsensitivePath, $caseSensitivePath );
-            if( $caseInsensitivePath === false ) {
+            if ( $caseInsensitivePath === false ) {
                 return $caseSensitivePath;
             }
             $caseInsensitiveFileExists = $this->fileExistsCI( $caseInsensitivePath );
-            if( $caseInsensitiveFileExists !== false ) {
+            if ( $caseInsensitiveFileExists !== false ) {
                 return $caseInsensitiveFileExists . $caseSensitivePath;
             }
             $caseInsensitivePath = $this->dbxClient->getMetadata( $caseInsensitivePath )['path'];
         }
     }
 
-    private function getCaseSensitiveMetadata ( $caseInsensitivePath, $caseSensitivePath = "" ) {
+    private function getCaseSensitiveMetadata ( $caseInsensitivePath, $caseSensitivePath = "" )
+    {
         $pathParts = explode( '/', $caseInsensitivePath );
         $pathLevels = count( $pathParts );
         $caseSensitivePath = "/" . array_pop( $pathParts ) . $caseSensitivePath;
         $pathLevels--;
-        if( $pathLevels === 1 ) {
+        if ( $pathLevels === 1 ) {
             return array( $caseSensitivePath, false );
         } elseif ( $pathLevels >= 2 ) {
             $caseSensitivePath = "/" . array_pop( $pathParts ) . $caseSensitivePath;
             $pathLevels--;
-            if( $pathLevels === 1 ) {
+            if ( $pathLevels === 1 ) {
                 return array( $caseSensitivePath, false );
             }
         }
@@ -367,7 +369,7 @@ class DropboxPlugin extends Plugin
         return array( $caseSensitivePath, $caseInsensitivePath );
     }
 
-    private function fileExistsSingle( $file )
+    private function fileExistsSingle ( $file )
     {
         if ( file_exists( $file ) === true ) {
             return $file;
@@ -381,7 +383,7 @@ class DropboxPlugin extends Plugin
         return false;
     }
 
-    private function fileExistsCI( $filePath )
+    private function fileExistsCI ( $filePath )
     {
         $localFilePath = DBX_SYNC_LOCAL . $filePath;
 
@@ -415,7 +417,7 @@ class DropboxPlugin extends Plugin
             $this->dbxClient->getFile( $remoteSyncPath, $fp );
             $this->createLocal( "file", $tempLocalPath, "close", $fp );
             for( $i = 0; $i < 60 * 3; $i++ ) {
-                if( file_exists( $tempLocalPath ) === true ) {
+                if ( file_exists( $tempLocalPath ) === true ) {
                     break;
                 }
                 sleep(1);
@@ -444,7 +446,7 @@ class DropboxPlugin extends Plugin
                     $size = filesize( $localSyncPath );
                 }
                 $writeMode = dbx\WriteMode::add();
-                if( $content[4] !== null ){
+                if ( $content[4] !== null ){
                     $writeMode = dbx\WriteMode::update( $rev );
                 }
                 $f = fopen( $localSyncPath, "rb" );
@@ -498,10 +500,10 @@ class DropboxPlugin extends Plugin
 
     private function deleteLocalFile ( $content )
     {
-        if( $content !== null ) {
+        if ( $content !== null ) {
             $object = DBX_SYNC_LOCAL . $content;
             if ( file_exists( $object ) ) {
-                if( is_dir( $object ) ){
+                if ( is_dir( $object ) ){
                     $inner_objects =
                         new \RecursiveIteratorIterator(
                             new \RecursiveDirectoryIterator(
@@ -511,7 +513,7 @@ class DropboxPlugin extends Plugin
                             \RecursiveIteratorIterator::CHILD_FIRST
                         );
                     foreach ( $inner_objects as $inner_object ) {
-                        if( $inner_object->isDir() ) {
+                        if ( $inner_object->isDir() ) {
                             rmdir( $inner_object );
                         } else {
                             unlink( $inner_object );
@@ -527,11 +529,11 @@ class DropboxPlugin extends Plugin
 
     private function deleteRemoteFile ( $content )
     {
-        if( $content !== null ) {
+        if ( $content !== null ) {
             $object = DBX_SYNC_REMOTE . $content;
-            if( $object !== '/' && !empty( $object ) ) {
+            if ( $object !== '/' && !empty( $object ) ) {
                 $metadata = $this->dbxClient->getMetadata( $object );
-                if( $metadata !== null ) {
+                if ( $metadata !== null ) {
                     $this->dbxClient->delete( $object );
                 }
             }
@@ -562,7 +564,7 @@ class DropboxPlugin extends Plugin
         $clientIdentifier = getenv('HTTP_HOST');
         $userLocale = null;
         $this->dbxClient = new dbx\Client( DBX_APP_TOKEN, $clientIdentifier, $userLocale, $appInfo->getHost() );
-        if( $this->dbxClient !== false ) {
+        if ( $this->dbxClient !== false ) {
             return true;
         } else {
             $this->grav['log']->error("Dropbox couldn't authorize client.");
