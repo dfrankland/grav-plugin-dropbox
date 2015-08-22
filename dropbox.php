@@ -467,7 +467,7 @@ class DropboxPlugin extends Plugin
                         if ( flock( $fp, LOCK_EX | LOCK_NB ) ) {
                             return $fp;
                         } else {
-                            // TODO: throw error;
+                            return $fp;
                         }
                         break;
                     case "close":
