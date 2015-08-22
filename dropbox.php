@@ -199,8 +199,8 @@ class DropboxPlugin extends Plugin
                 $dbx_cache_id = md5( "dbxContent" . $content[0] );
                 list( $object, $path , $mtime ) = $this->cache->fetch( $dbx_cache_id );
                 if ( $content[1] !== null ) {
-                    $content[1] = $this->getCaseSensitivePath( $content[1] );
                     if ( $object === null || $object !== null && $mtime < $content[2] ) {
+                        $content[1] = $this->getCaseSensitivePath( $content[1] );
                         $content[2] = $this->getFile( $content );
                         if ( $content[2] !== false ) { // Don't cache timed out files
                             $this->cache->save( $dbx_cache_id, $content );
