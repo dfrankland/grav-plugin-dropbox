@@ -208,9 +208,6 @@ class DropboxPlugin extends Plugin
                     }
                 } else {
                     $this->deleteLocalFile( $path );
-                    if ( $this->cache->fetch( $dbx_cache_id ) !== null ){
-                        $this->cache->save( $dbx_cache_id, array( $content[0], null, null, null, null ) );
-                    }
                 }
             }
         } else {
