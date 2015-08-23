@@ -8,6 +8,7 @@ define( 'DBX_DIR', USER_DIR . 'plugins/dropbox/' );
 define( 'DBX_TMP_DIR', USER_DIR . 'plugins/dropbox/.temp/' );
 define( 'CURSOR_FILE', DBX_DIR . '.cursor' );
 define( 'SYNCPATHS_FILE', DBX_DIR . '.syncpaths');
+define( 'RUNNING_FILE', DBX_DIR . '.running');
 
 require_once DBX_DIR . 'vendor/autoload.php';
 
@@ -236,22 +237,47 @@ class DropboxPlugin extends Plugin
     // Check cache for changed files and upload
     private function youreMine ()
     {
-        $contents = $this->recurse();
         if ( CACHE_ENABLED === true ) {
-            foreach ( $contents as $content ){
-                $dbx_cache_id = md5( "dbxContent" . $content[0] );
-                list( $object, , $mtime ) = $this->cache->fetch( $dbx_cache_id );
-                if ( $object === null ) {
-                    $this->uploadFile( $content );
-                    $this->cache->save( $dbx_cache_id, $content );
-                } elseif ( $object !== null && $mtime < $content[2]  ) {
-                    $this->uploadFile( $content );
-                    $this->cache->save( $dbx_cache_id, $content );
-                }
+            $dbx_cache_id_running = md5( "dbxRunning" );
+            $status = $this->cache->fetch( $dbx_cache_id_running );
+            if ( $status === "DONE" || $status === false ) {
+                $running = false;
+                $this->cache->save( $dbx_cache_id_running, "STARTED" );
+            } else {
+                $running = true;
             }
         } else {
-            foreach ( $contents as $content ){
-                $this->uploadFile( $content );
+            if( file_exists( RUNNING_FILE ) ) {
+                if( file_get_contents( RUNNING_FILE ) === "DONE" ) {
+                    $running = false;
+                    $this->createLocal( "file", RUNNING_FILE, "put", "STARTED" );
+                } else {
+                    $running = true;
+                }
+            } else {
+                $running = false;
+                $this->createLocal( "file", RUNNING_FILE, "put", "STARTED" );
+            }
+        }
+        if ( $running === false ) {
+            $contents = $this->recurse();
+            if ( CACHE_ENABLED === true ) {
+                foreach ( $contents as $content ){
+                    $dbx_cache_id = md5( "dbxContent" . $content[0] );
+                    list( $object, , $mtime ) = $this->cache->fetch( $dbx_cache_id );
+                    if ( $object === null || $object !== null && $mtime < $content[2] ) {
+                        $metadata = $this->uploadFile( $content );
+                        $content[2] = $metadata['modified'];
+                        $content[4] = $metadata['rev'];
+                        $this->cache->save( $dbx_cache_id, $content );
+                    }
+                }
+                $this->cache->save( $dbx_cache_id_running, "DONE" );
+            } else {
+                foreach( $contents as $content ){
+                    $this->uploadFile( $content );
+                }
+                $this->createLocal( "file", RUNNING_FILE, "put", "DONE" );
             }
         }
     }
@@ -434,6 +460,7 @@ class DropboxPlugin extends Plugin
         $remoteSyncPath = DBX_SYNC_REMOTE . $content[1];
         $localSyncPath = DBX_SYNC_LOCAL . $content[1];
         $pathError = dbx\Path::findError( $remoteSyncPath );
+        $tempLocalPath = DBX_TMP_DIR . basename( $content[1] );
         if ( $pathError !== null ) {
             $this->grav['log']->error("Dropbox remote sync path error: $pathError");
         } else {
@@ -446,10 +473,24 @@ class DropboxPlugin extends Plugin
                 if ( $content[4] !== null ){
                     $writeMode = dbx\WriteMode::update( $rev );
                 }
-                $f = fopen( $localSyncPath, "rb" );
-                $metadata = $this->dbxClient->uploadFile( $remoteSyncPath, $writeMode, $f, $size );
-                fclose( $f );
-                // TODO: check metadata for if file was renamed to prevent file feedback loop
+                $fp = fopen( $localSyncPath, "rb" );
+                $metadata = $this->dbxClient->uploadFile( $remoteSyncPath, $writeMode, $fp, $size );
+                fclose( $fp );
+                $metadata['modified'] = strtotime( $metadata['modified'] );
+                try {
+                    $touched = touch( $localSyncPath, $metadata['modified'] );
+                }
+                catch ( \Exception $e ) {
+                    $touched = false;
+                }
+                if( $touched === false ){
+                    copy( $localSyncPath, $tempLocalPath );
+                    unlink( $localSyncPath );
+                    rename( $tempLocalPath, $localSyncPath );
+                    touch( $localSyncPath, $metadata['modified'] );
+                }
+                clearstatcache( true, $localSyncPath );
+                return $metadata;
             } else {
                 $this->dbxClient->createFolder( $remoteSyncPath );
             }
