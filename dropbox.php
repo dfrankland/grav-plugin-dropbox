@@ -264,8 +264,9 @@ class DropboxPlugin extends Plugin
             if ( CACHE_ENABLED === true ) {
                 foreach ( $contents as $content ){
                     $dbx_cache_id = md5( "dbxContent" . $content[0] );
-                    list( $object, , $mtime ) = $this->cache->fetch( $dbx_cache_id );
+                    list( $object, , $mtime, , $rev ) = $this->cache->fetch( $dbx_cache_id );
                     if ( $object === null || $object !== null && $mtime < $content[2] ) {
+                        $content[4] = $rev;
                         $metadata = $this->uploadFile( $content );
                         $content[2] = $metadata['modified'];
                         $content[4] = $metadata['rev'];
@@ -470,8 +471,13 @@ class DropboxPlugin extends Plugin
                     $size = filesize( $localSyncPath );
                 }
                 $writeMode = dbx\WriteMode::add();
-                if ( $content[4] !== null ){
-                    $writeMode = dbx\WriteMode::update( $rev );
+                if ( $content[4] !== null ) {
+                    $writeMode = dbx\WriteMode::update( $content[4] );
+                } else {
+                    $metadata = $this->dbxClient->getMetadata( $remoteSyncPath );
+                    if( $metadata !== null && $metadata['rev'] !== null ) {
+                        $writeMode = dbx\WriteMode::update( $metadata['rev'] );
+                    }
                 }
                 $fp = fopen( $localSyncPath, "rb" );
                 $metadata = $this->dbxClient->uploadFile( $remoteSyncPath, $writeMode, $fp, $size );
