@@ -462,13 +462,13 @@ class DropboxPlugin extends Plugin
             case "file":
                 switch ( $action ) {
                     case "open":
-                        $fp = fopen( $name, "w+b" );
+                        $fp = fopen( $name, "wb" );
                         if ( flock( $fp, LOCK_EX | LOCK_NB ) ) {
                             return $fp;
                         } else {
                             return $fp;
                         }
-                        break;
+                        return;
                     case "close":
                         $fp = $data;
                         flock( $fp, LOCK_UN );
@@ -476,22 +476,28 @@ class DropboxPlugin extends Plugin
                         $oldmask = umask(0);
                         chmod( $name, 0660 );
                         umask( $oldmask );
-                        break;
+                        return;
                     case "put":
-                        file_put_contents( $name, $data, LOCK_EX | LOCK_NB );
+                        $fp = fopen( $name, "wb" );
+                        if ( flock( $fp, LOCK_EX | LOCK_NB ) ) {
+                            fwrite( $fp, $data );
+                            flock( $fp, LOCK_UN );
+                        } else {
+                            fwrite( $fp, $data );
+                        }
+                        fclose( $fp );
                         $oldmask = umask(0);
                         chmod( $name, 0660 );
                         umask( $oldmask );
-                        break;
+                        return;
                 }
-                break;
             case "dir":
                 if ( !file_exists( $name ) ) {
                     $oldmask = umask(0);
                     mkdir( $name, 0770, true );
                     umask( $oldmask );
                 }
-                break;
+                return;
         }
     }
 
