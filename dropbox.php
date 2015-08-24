@@ -285,33 +285,35 @@ class DropboxPlugin extends Plugin
 
     private function recurse ()
     {
-        $localSyncPaths = array();
+        $newLocalSyncPaths = array();
         $contents = array();
-        $objects = new \RecursiveIteratorIterator( new \RecursiveDirectoryIterator( DBX_SYNC_LOCAL ) );
+        $objects = $this->rdi( DBX_SYNC_LOCAL );
         if ( CACHE_ENABLED === true ){
             $dbx_cache_id = md5( "dbxLocalContent" );
-            list( $oldLocalSyncPaths ) = $this->cache->fetch( $dbx_cache_id );
+            $oldLocalSyncPaths = $this->cache->fetch( $dbx_cache_id );
         } else {
             if ( file_exists( SYNCPATHS_FILE ) ) {
                 $oldLocalSyncPaths = json_decode ( file_get_contents( SYNCPATHS_FILE ) );
             }
         }
         foreach ( $objects as $object ) {
-            clearstatcache( true, $object );
-            if ( $object->isDir() ) {
-                $dir = true;
-                if ( count( glob( "$object/*", GLOB_NOSORT ) ) === 0 ) {
-                    $object = rtrim( $object, "/." );
-                } else {
+            if ( $object === DBX_TMP_DIR ) {
+                continue;
+            } elseif( $object->isDir() ) {
+                $inner_objects = $this->rdi( $object );
+                if ( iterator_count( $inner_objects ) > 0 ) {
                     continue;
+                } else {
+                    $dir = true;
                 }
             } else {
                 $dir = false;
             }
-            $mtime = stat( $object )['mtime'];
+            clearstatcache( true, $object );
+            $mtime = $object->getMTime();
             $object = str_replace( DBX_SYNC_LOCAL, '', $object );
-            $localSyncPaths[] = $object;
-            if ( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
+            $newLocalSyncPaths[] = $object;
+            if ( $oldLocalSyncPaths !== null && $oldLocalSyncPaths !== false && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
                 $needle = $object;
                 $found = false;
                 while ( $found === false ) {
@@ -330,17 +332,15 @@ class DropboxPlugin extends Plugin
                 $contents[] = array( strtolower($object), $object, $mtime, $dir, null );
             }
         }
-        if ( $oldLocalSyncPaths !== null && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
-            foreach ( $oldLocalSyncPaths as $oldSyncPath ) {
-                $this->deleteRemoteFile( $oldSyncPath );
+        if ( $oldLocalSyncPaths !== null && $oldLocalSyncPaths !== false && isset( $oldLocalSyncPaths[0] ) && $oldLocalSyncPaths[0] !== '' ) {
+            foreach ( $oldLocalSyncPaths as $oldLocalSyncPath ) {
+                $this->deleteRemoteFile( $oldLocalSyncPath );
             }
         }
         if ( CACHE_ENABLED === true ){
-            $this->cache->save( $dbx_cache_id, array( $localSyncPaths ) );
+            $this->cache->save( $dbx_cache_id, $newLocalSyncPaths );
         } else {
-            if ( !file_exists( SYNCPATHS_FILE ) ) {
-                $this->createLocal( "file", SYNCPATHS_FILE, "put", json_encode( $localSyncPaths ) );
-            }
+            $this->createLocal( "file", SYNCPATHS_FILE, "put", json_encode( $newLocalSyncPaths ) );
         }
         return $contents;
     }
@@ -554,14 +554,7 @@ class DropboxPlugin extends Plugin
             $object = DBX_SYNC_LOCAL . $content;
             if ( file_exists( $object ) ) {
                 if ( is_dir( $object ) ){
-                    $inner_objects =
-                        new \RecursiveIteratorIterator(
-                            new \RecursiveDirectoryIterator(
-                                $object,
-                                \RecursiveDirectoryIterator::SKIP_DOTS
-                            ),
-                            \RecursiveIteratorIterator::CHILD_FIRST
-                        );
+                    $inner_objects = $this->rdi( $object );
                     foreach ( $inner_objects as $inner_object ) {
                         if ( $inner_object->isDir() ) {
                             rmdir( $inner_object );
@@ -588,6 +581,19 @@ class DropboxPlugin extends Plugin
                 }
             }
         }
+    }
+
+    private function rdi ( $dir )
+    {
+        $rdi =
+            new \RecursiveIteratorIterator(
+                new \RecursiveDirectoryIterator(
+                    $dir,
+                    \RecursiveDirectoryIterator::SKIP_DOTS
+                ),
+                \RecursiveIteratorIterator::CHILD_FIRST
+            );
+        return $rdi;
     }
 
     // Create AppInfo to getClient
