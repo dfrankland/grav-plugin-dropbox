@@ -297,7 +297,7 @@ class DropboxPlugin extends Plugin
             }
         }
         foreach ( $objects as $object ) {
-            if ( $object === DBX_TMP_DIR ) {
+            if ( strpos( $object->getRealPath(), realpath( DBX_TMP_DIR ) ) !== false ) {
                 continue;
             } elseif( $object->isDir() ) {
                 $inner_objects = $this->rdi( $object );
