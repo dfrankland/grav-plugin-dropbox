@@ -482,6 +482,13 @@ class DropboxPlugin extends Plugin
                 $fp = fopen( $localSyncPath, "rb" );
                 $metadata = $this->dbxClient->uploadFile( $remoteSyncPath, $writeMode, $fp, $size );
                 fclose( $fp );
+            } else {
+                $metadata = $this->dbxClient->createFolder( $remoteSyncPath );
+            }
+            if( $metadata === null ) {
+                $metadata = $this->dbxClient->getMetadata( $remoteSyncPath );
+            }
+            if( $metadata !== null ) {
                 $metadata['modified'] = strtotime( $metadata['modified'] );
                 try {
                     $touched = touch( $localSyncPath, $metadata['modified'] );
@@ -496,10 +503,8 @@ class DropboxPlugin extends Plugin
                     touch( $localSyncPath, $metadata['modified'] );
                 }
                 clearstatcache( true, $localSyncPath );
-                return $metadata;
-            } else {
-                $this->dbxClient->createFolder( $remoteSyncPath );
             }
+            return $metadata;
         }
     }
 
