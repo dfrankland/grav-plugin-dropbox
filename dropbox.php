@@ -439,7 +439,7 @@ class DropboxPlugin extends Plugin
             $tempLocalPath = DBX_TMP_DIR . basename( $content[1] );
             $this->createLocal( "dir", dirname( $localSyncPath ) );
             $fp = $this->createLocal( "file", $tempLocalPath, "open" );
-            $this->dbxClient->getFile( $remoteSyncPath, $fp );
+            $metadata = $this->dbxClient->getFile( $remoteSyncPath, $fp );
             $this->createLocal( "file", $tempLocalPath, "close", $fp );
             for( $i = 0; $i < 60 * 3; $i++ ) {
                 if ( file_exists( $tempLocalPath ) === true ) {
@@ -448,6 +448,9 @@ class DropboxPlugin extends Plugin
                 sleep(1);
             }
             if ( file_exists( $tempLocalPath ) === false ){
+                return false;
+            } elseif ( $metadata === null ) {
+                unlink( $tempLocalPath );
                 return false;
             }
             rename( $tempLocalPath, $localSyncPath );
