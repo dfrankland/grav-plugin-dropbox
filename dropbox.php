@@ -515,6 +515,7 @@ class DropboxPlugin extends Plugin
             case "file":
                 switch ( $action ) {
                     case "open":
+                        $this->createLocal( "dir", dirname( $name ) );
                         $fp = fopen( $name, "wb" );
                         if ( flock( $fp, LOCK_EX | LOCK_NB ) ) {
                             return $fp;
