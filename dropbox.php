@@ -16,6 +16,8 @@ require_once DBX_DIR . 'vendor/autoload.php';
 
 use Dropbox as dbx;
 
+ignore_user_abort( true );
+
 class DropboxPlugin extends Plugin
 {
     private $dbxClient;
@@ -234,7 +236,7 @@ class DropboxPlugin extends Plugin
                 }
             }
         }
-        $this->youreMine();
+        $this->httpFork();
     }
 
     // Check cache for changed files and upload
@@ -642,5 +644,17 @@ class DropboxPlugin extends Plugin
             // TODO: send email alert (failed attempt to authorize);
             return false;
         }
+    }
+
+    private function httpFork ( $request = false, $url = "127.0.0.1/dropbox" )
+    {
+        $ch = curl_init();
+        curl_setopt( $ch, CURLOPT_URL, $url );
+        if ( $request !== false ) {
+            curl_setopt( $ch, CURLOPT_CUSTOMREQUEST, $request );
+        }
+        curl_setopt( $ch, CURLOPT_TIMEOUT_MS, 5 );
+        curl_exec( $ch );
+        curl_close( $ch );
     }
 }
