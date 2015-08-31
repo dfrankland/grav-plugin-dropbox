@@ -527,7 +527,12 @@ class DropboxPlugin extends Plugin
                         flock( $fp, LOCK_UN );
                         fclose( $fp );
                         $oldmask = umask(0);
-                        chmod( $name, 0660 );
+                        try {
+                            chmod( $name, 0660 );
+                        }
+                        catch ( \Exception $e ) {
+                            $this->grav['log']->warning( "Dropbox chmod() error: $name" );
+                        }
                         umask( $oldmask );
                         return;
                     case "put":
