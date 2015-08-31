@@ -124,7 +124,8 @@ class DropboxPlugin extends Plugin
         $contentsDirs = array();
         $contentsFiles = array();
         if ( CACHE_ENABLED === true ) {
-            list( $cursor ) = $this->cache->fetch( CACHE_ID_CURSOR );
+            $cursor = $this->cache->fetch( CACHE_ID_CURSOR );
+            $cursor = $cursor === false ? null : $cursor;
             while ( $has_more ) {
                 $delta = $this->dbxClient->getDelta( $cursor, DBX_SYNC_REMOTE );
                 foreach ( $delta['entries'] as $entry ) {
@@ -153,7 +154,7 @@ class DropboxPlugin extends Plugin
                 $this->imYours( $contentsDirs );
                 $this->imYours( $contentsFiles );
                 $cursor = $delta['cursor'];
-                $this->cache->save( CACHE_ID_CURSOR, array( $cursor ) );
+                $this->cache->save( CACHE_ID_CURSOR, $cursor );
                 $has_more = $delta['has_more'];
             }
         } else {
