@@ -7,8 +7,10 @@ use Grav\Common\Cache;
 define( 'DBX_DIR', USER_DIR . 'plugins/dropbox/' );
 define( 'DBX_TMP_DIR', USER_DIR . 'plugins/dropbox/.temp/' );
 define( 'CURSOR_FILE', DBX_DIR . '.cursor' );
-define( 'SYNCPATHS_FILE', DBX_DIR . '.syncpaths');
-define( 'RUNNING_FILE', DBX_DIR . '.running');
+define( 'SYNCPATHS_FILE', DBX_DIR . '.syncpaths' );
+define( 'RUNNING_FILE', DBX_DIR . '.running' );
+define( 'CACHE_ID_RUNNING', md5( "dbxRunning" ) );
+define( 'CACHE_ID_LOCAL_CONTENT', md5( "dbxLocalContent" ) );
 
 require_once DBX_DIR . 'vendor/autoload.php';
 
@@ -56,6 +58,7 @@ class DropboxPlugin extends Plugin
 
         define( 'DBX_SYNC_REMOTE', $this->config->get('plugins.dropbox.sync.remote') );
         define( 'DBX_SYNC_LOCAL', DBX_DIR . $this->config->get('plugins.dropbox.sync.local') );
+        define( 'CACHE_ID_CURSOR', md5( "dbxCursor" . DBX_SYNC_REMOTE ) );
 
         $request = getenv('REQUEST_METHOD');
         if ( $request === null ) {
@@ -121,8 +124,7 @@ class DropboxPlugin extends Plugin
         $contentsDirs = array();
         $contentsFiles = array();
         if ( CACHE_ENABLED === true ) {
-            $dbx_cache_id = md5( "dbxCursor" . DBX_SYNC_REMOTE );
-            list( $cursor ) = $this->cache->fetch( $dbx_cache_id );
+            list( $cursor ) = $this->cache->fetch( CACHE_ID_CURSOR );
             while ( $has_more ) {
                 $delta = $this->dbxClient->getDelta( $cursor, DBX_SYNC_REMOTE );
                 foreach ( $delta['entries'] as $entry ) {
@@ -151,7 +153,7 @@ class DropboxPlugin extends Plugin
                 $this->imYours( $contentsDirs );
                 $this->imYours( $contentsFiles );
                 $cursor = $delta['cursor'];
-                $this->cache->save( $dbx_cache_id, array( $cursor ) );
+                $this->cache->save( CACHE_ID_CURSOR, array( $cursor ) );
                 $has_more = $delta['has_more'];
             }
         } else {
@@ -238,11 +240,10 @@ class DropboxPlugin extends Plugin
     private function youreMine ()
     {
         if ( CACHE_ENABLED === true ) {
-            $dbx_cache_id_running = md5( "dbxRunning" );
-            $status = $this->cache->fetch( $dbx_cache_id_running );
+            $status = $this->cache->fetch( CACHE_ID_RUNNING );
             if ( $status === "DONE" || $status === false ) {
                 $running = false;
-                $this->cache->save( $dbx_cache_id_running, "STARTED" );
+                $this->cache->save( CACHE_ID_RUNNING, "STARTED" );
             } else {
                 $running = true;
             }
@@ -273,7 +274,7 @@ class DropboxPlugin extends Plugin
                         $this->cache->save( $dbx_cache_id, $content );
                     }
                 }
-                $this->cache->save( $dbx_cache_id_running, "DONE" );
+                $this->cache->save( CACHE_ID_RUNNING, "DONE" );
             } else {
                 foreach( $contents as $content ){
                     $this->uploadFile( $content );
@@ -289,8 +290,7 @@ class DropboxPlugin extends Plugin
         $contents = array();
         $objects = $this->rdi( DBX_SYNC_LOCAL );
         if ( CACHE_ENABLED === true ){
-            $dbx_cache_id = md5( "dbxLocalContent" );
-            $oldLocalSyncPaths = $this->cache->fetch( $dbx_cache_id );
+            $oldLocalSyncPaths = $this->cache->fetch( CACHE_ID_LOCAL_CONTENT );
         } else {
             if ( file_exists( SYNCPATHS_FILE ) ) {
                 $oldLocalSyncPaths = json_decode ( file_get_contents( SYNCPATHS_FILE ) );
@@ -338,7 +338,7 @@ class DropboxPlugin extends Plugin
             }
         }
         if ( CACHE_ENABLED === true ){
-            $this->cache->save( $dbx_cache_id, $newLocalSyncPaths );
+            $this->cache->save( CACHE_ID_LOCAL_CONTENT, $newLocalSyncPaths );
         } else {
             $this->createLocal( "file", SYNCPATHS_FILE, "put", json_encode( $newLocalSyncPaths ) );
         }
